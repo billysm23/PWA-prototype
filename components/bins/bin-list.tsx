@@ -1,0 +1,37 @@
+'use client';
+
+import { Bin } from '@/types/bin';
+import BinCard from './bin-card';
+import { useRouter } from 'next/navigation';
+
+interface BinListProps {
+  bins: Bin[];
+}
+
+export default function BinList({ bins }: BinListProps) {
+  const router = useRouter();
+
+  const handleBinClick = (binId: string) => {
+    router.push(`/dustbins/${binId}`);
+  };
+
+  if (bins.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500 dark:text-gray-400">Tidak ada tempat sampah yang ditemukan.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {bins.map((bin) => (
+        <BinCard 
+          key={bin.id} 
+          bin={bin}
+          onClick={() => handleBinClick(bin.id)}
+        />
+      ))}
+    </div>
+  );
+} 

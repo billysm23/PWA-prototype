@@ -1,0 +1,9 @@
+export default function Footer() {
+  return (
+    <footer className="mt-8 text-center text-sm text-gray-500 py-4">
+      <div className="container mx-auto">
+        <p>&copy; {new Date().getFullYear()} Smart Dustbin PWA. Semua hak dilindungi.</p>
+      </div>
+    </footer>
+  );
+}
