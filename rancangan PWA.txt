@@ -1,0 +1,65 @@
+Frontend:
+- React with TypeScript
+- Service Workers for offline capabilities
+- IndexedDB for local data storage
+- Workbox for PWA tooling
+- Responsive design framework (Tailwind CSS)
+
+Backend:
+- Supabase (as you planned)
+  - User authentication
+  - Real-time database
+  - REST API
+
+Core PWA Features:
+- Service worker for caching and offline support
+- Web App Manifest for installation
+- Responsive design for all screen sizes
+- Geolocation API access
+- Push notifications for alerts
+- Background sync for offline data collection
+
+┌─────────────────────────────────────────┐
+│ Progressive Web App                      │
+│ ┌─────────────┐       ┌─────────────┐   │
+│ │ Desktop View │       │ Mobile View │   │
+│ │             │       │             │   │
+│ │ - Dashboard  │       │ - Compact UI│   │
+│ │ - Analytics  │       │ - Route View│   │
+│ │ - Admin Tools│       │ - Collection│   │
+│ └─────────────┘       └─────────────┘   │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │     Shared Components & Logic        │ │
+│ │                                     │ │
+│ │  - Bin Management                   │ │
+│ │  - Real-time Updates                │ │
+│ │  - Authentication                   │ │
+│ │  - Offline Data Handling            │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────┐
+│ Service Worker                           │
+│                                         │
+│ - Caching Strategies                    │
+│ - Background Sync                       │
+│ - Push Notifications                    │
+│ - Offline Data Management               │
+└─────────────────────────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────┐
+│ Supabase Backend                         │
+│                                         │
+│ - Authentication                        │
+│ - Real-time Database                    │
+│ - REST API                              │
+│ - Storage                               │
+└─────────────────────────────────────────┘
+            ▲
+            │
+┌─────────────────────────────────────────┐
+│ IoT Devices (ESP8266 + Sensors)          │
+└─────────────────────────────────────────┘

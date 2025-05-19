@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { toast } from 'sonner';
 
 interface AuthState {
   user: User | null;
@@ -12,6 +13,10 @@ interface AuthState {
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  
+  // Social auth
+  signInWithGoogle: () => Promise<void>;
+  signInWithGithub: () => Promise<void>;
   
   // Profile update
   updateProfile: (profile: { name?: string; avatar_url?: string }) => Promise<void>;
@@ -35,15 +40,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       if (error) {
         set({ error: error.message, isLoading: false });
+        toast.error('Login gagal: ' + error.message);
         return { error: error.message };
       }
       
       set({ user: data.user, isLoading: false });
+      toast.success('Login berhasil! Selamat datang kembali.');
       return {};
     } catch (error: any) {
       console.error('Sign in error:', error);
       const errorMessage = error.message || 'Failed to sign in';
       set({ error: errorMessage, isLoading: false });
+      toast.error('Login gagal: ' + errorMessage);
       return { error: errorMessage };
     }
   },
@@ -62,8 +70,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        toast.error('Pendaftaran gagal: ' + error.message);
+        throw error;
+      }
+      
       set({ user: data.user, isLoading: false });
+      toast.success('Pendaftaran berhasil! Selamat datang di Smart Dustbin.');
       
     } catch (error: any) {
       console.error('Sign up error:', error);
@@ -71,12 +84,66 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  signInWithGoogle: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: typeof window !== 'undefined' 
+            ? `${window.location.origin}/auth/callback` 
+            : undefined
+        }
+      });
+      
+      if (error) {
+        toast.error('Login dengan Google gagal: ' + error.message);
+        throw error;
+      }
+      // Redirect akan ditangani oleh Supabase, tidak perlu set user
+      toast.loading('Menghubungkan dengan Google...');
+      
+    } catch (error: any) {
+      console.error('Google sign in error:', error);
+      set({ error: error.message || 'Failed to sign in with Google', isLoading: false });
+    }
+  },
+
+  signInWithGithub: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: typeof window !== 'undefined' 
+            ? `${window.location.origin}/auth/callback` 
+            : undefined
+        }
+      });
+      
+      if (error) {
+        toast.error('Login dengan GitHub gagal: ' + error.message);
+        throw error;
+      }
+      // Redirect akan ditangani oleh Supabase, tidak perlu set user
+      toast.loading('Menghubungkan dengan GitHub...');
+      
+    } catch (error: any) {
+      console.error('GitHub sign in error:', error);
+      set({ error: error.message || 'Failed to sign in with GitHub', isLoading: false });
+    }
+  },
+
   signOut: async () => {
     set({ isLoading: true, error: null });
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) {
+        toast.error('Logout gagal: ' + error.message);
+        throw error;
+      }
       set({ user: null, isLoading: false });
+      toast.success('Logout berhasil. Sampai jumpa kembali!');
     } catch (error: any) {
       console.error('Sign out error:', error);
       set({ error: error.message || 'Failed to sign out', isLoading: false });
@@ -92,8 +159,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           : undefined,
       });
       
-      if (error) throw error;
+      if (error) {
+        toast.error('Reset password gagal: ' + error.message);
+        throw error;
+      }
       set({ isLoading: false });
+      toast.success('Instruksi reset password telah dikirim ke email Anda.');
     } catch (error: any) {
       console.error('Reset password error:', error);
       set({ error: error.message || 'Failed to reset password', isLoading: false });
@@ -107,11 +178,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         data: profile
       });
       
-      if (error) throw error;
+      if (error) {
+        toast.error('Update profil gagal: ' + error.message);
+        throw error;
+      }
       
       // Refresh user data
       await get().checkSession();
       set({ isLoading: false });
+      toast.success('Profil berhasil diperbarui!');
     } catch (error: any) {
       console.error('Update profile error:', error);
       set({ error: error.message || 'Failed to update profile', isLoading: false });
