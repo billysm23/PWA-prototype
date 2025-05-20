@@ -9,8 +9,8 @@
 #include <LiquidCrystal_I2C.h>
 
 // Konfigurasi WiFi
-const char *ssid = "ITB Hotspot";
-const char *password = "";
+const char *ssid = "BukanWifi";
+const char *password = "Billy1Billy2";
 
 // API Key (harus sama dengan yang di server)
 const char *apiKey = "smart-dustbin-secret-key";
@@ -19,7 +19,7 @@ const char *apiKey = "smart-dustbin-secret-key";
 const char *binId = "1"; 
 
 // URL API untuk update data - sesuaikan dengan URL aplikasi Anda
-const char *serverUrl = "https://smart-dustbin-pwa.vercel.app/api/bins/update";
+const char *serverUrl = "http://192.168.8.244:3000/api/bins/update";
 
 // Tambahan untuk mode AP jika koneksi gagal
 const char* ap_ssid = "SmartDustbin_AP";
@@ -56,7 +56,7 @@ unsigned long lastUpdateTime = 0;
 const long updateInterval = 60000; // 60 detik antara pengiriman data
 
 // Variabel untuk status koneksi
-bool wifiConnected = true;
+bool wifiConnected = false;
 
 // Web server untuk melihat status
 ESP8266WebServer server(80);
@@ -452,9 +452,10 @@ void displayGPSInfo() {
 }
 
 // Fungsi untuk mengirim data ke server
+// Fungsi untuk mengirim data ke server
 void sendDataToServer() {
   // Cek apakah WiFi terhubung
-  if (!wifiConnected) {
+  if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Cannot send data: WiFi not connected");
     return;
   }
@@ -480,6 +481,10 @@ void sendDataToServer() {
   if (gpsValid) {
     doc["latitude"] = gpsLat;
     doc["longitude"] = gpsLng;
+  } else {
+    // Nilai default
+    doc["latitude"] = -6.914744;
+    doc["longitude"] = 107.609810;
   }
   
   // Serialize JSON ke string
