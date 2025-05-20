@@ -1,5 +1,5 @@
 import { Database } from '@/types/supabase';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -34,13 +34,13 @@ export async function POST(req: NextRequest) {
     // Menerima data dari ESP8266
     const { bin_id, fill_level, latitude, longitude, api_key } = await req.json();
     
-    console.log("Received data from sensor:", { 
-      bin_id, 
-      fill_level, 
-      latitude, 
-      longitude,
-      timestamp: new Date().toISOString()
-    });
+    // console.log("Received data from sensor:", { 
+    //   bin_id, 
+    //   fill_level, 
+    //   latitude, 
+    //   longitude,
+    //   timestamp: new Date().toISOString()
+    // });
 
     // Validasi input
     if (!bin_id || fill_level === undefined || !api_key) {
@@ -60,12 +60,28 @@ export async function POST(req: NextRequest) {
     }
     
     // Koneksi ke Supabase
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
+    const cookieStore = await cookies();
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: Record<string, any>) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: Record<string, any>) {
+            cookieStore.set({ name, value: '', ...options })
+          },
+        },
+      }
+    );
     
     // Tampilkan semua bin yang ada di database (untuk debugging)
     const { data: allBins, error: listError } = await supabase.from('bins').select('id');
-    console.log("All bins in database:", allBins);
+    // console.log("All bins in database:", allBins);
     
     // Cari bin dengan ID yang diberikan
     const { data: existingBin, error: findError } = await supabase
@@ -76,8 +92,7 @@ export async function POST(req: NextRequest) {
     
     // Jika bin tidak ditemukan, buat baru
     if (findError && findError.code === 'PGRST116') {
-      console.log(`Bin with ID ${bin_id} not found, creating new bin.`);
-      
+      // console.log(`Bin with ID ${bin_id} not found, creating new bin.`);
       const { data: newBin, error: insertError } = await supabase
         .from('bins')
         .insert({
@@ -146,23 +161,29 @@ export async function POST(req: NextRequest) {
     
     // Create alert if capacity is high
     if (fill_level > 80) {
-      // Cek apakah sudah ada alert aktif untuk tempat sampah ini
-      const { data: existingAlert } = await supabase
+      // Check if there's already an active alert for this bin
+      const { data: existingAlert, error: fetchError } = await supabase
         .from('alerts')
         .select('id')
         .eq('bin_id', bin_id)
-        .eq('status', 'OPEN')
+        .in('status', ['pending', 'acknowledged'])
         .single();
       
-      // Jika belum ada alert aktif, buat yang baru
+      if (fetchError && fetchError.code !== 'PGRST116') { // Not found error is ok
+        console.error('Error checking existing alerts:', fetchError);
+      } 
+      
+      // Only create new alert if no active alert exists
       if (!existingAlert) {
+        const alertType = fill_level > 90 ? 'capacity_critical' : 'capacity_warning';
+        
         const { error: alertError } = await supabase
           .from('alerts')
           .insert({
             bin_id,
-            alert_type: 'FULL',
-            priority: 'HIGH',
-            status: 'OPEN',
+            alert_type: alertType,
+            priority: 'high',
+            status: 'pending',
             created_at: new Date().toISOString()
           });
           

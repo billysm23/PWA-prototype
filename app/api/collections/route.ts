@@ -1,5 +1,5 @@
 import { Database } from '@/types/supabase';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -57,8 +57,24 @@ export async function POST(req: NextRequest) {
     }
     
     // Koneksi ke Supabase
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
+    const cookieStore = await cookies();
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: Record<string, any>) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: Record<string, any>) {
+            cookieStore.set({ name, value: '', ...options })
+          },
+        },
+      }
+    );
     
     // Perbarui data tempat sampah
     const { data, error } = await supabase
@@ -80,21 +96,37 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    // Buat alert jika level tinggi
+    // Create alert if capacity is high
     if (fill_level > 80) {
-      const { error: alertError } = await supabase
+      // Check if there's already an active alert for this bin
+      const { data: existingAlert, error: fetchError } = await supabase
         .from('alerts')
-        .insert({
-          bin_id,
-          alert_type: 'FULL',
-          priority: 'HIGH',
-          status: 'OPEN',
-          created_at: new Date().toISOString()
-        })
-        .select();
+        .select('id')
+        .eq('bin_id', bin_id)
+        .in('status', ['pending', 'acknowledged'])
+        .single();
+      
+      if (fetchError && fetchError.code !== 'PGRST116') { // Not found error is ok
+        console.error('Error checking existing alerts:', fetchError);
+      } 
+      
+      // Only create new alert if no active alert exists
+      if (!existingAlert) {
+        const alertType = fill_level > 90 ? 'capacity_critical' : 'capacity_warning';
         
-      if (alertError) {
-        console.error('Error creating alert:', alertError);
+        const { error: alertError } = await supabase
+          .from('alerts')
+          .insert({
+            bin_id,
+            alert_type: alertType,
+            priority: 'high',
+            status: 'pending',
+            created_at: new Date().toISOString()
+          });
+          
+        if (alertError) {
+          console.error('Error creating alert:', alertError);
+        }
       }
     }
     

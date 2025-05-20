@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   isNotificationSupported, 
-  getNotificationPermissionStatus,
   requestNotificationPermission,
   sendTestNotification,
   sendBinFullNotification,
@@ -11,6 +10,14 @@ import {
   sendCollectionNotification
 } from '@/lib/notifications';
 import { toast } from 'sonner';
+
+// Menambahkan type declaration untuk mengatasi properti yang tidak ada di TypeScript
+type NotificationConstructorWithPermissionChange = {
+  readonly permission: NotificationPermission;
+  onpermissionchange: ((this: Notification, ev: Event) => unknown) | null;
+  new(title: string, options?: NotificationOptions): Notification;
+  requestPermission(): Promise<NotificationPermission>;
+};
 
 type NotificationContextType = {
   isSupported: boolean;
@@ -42,12 +49,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           setPermission(Notification.permission);
         };
         
-        // @ts-ignore - Properti ini ada di beberapa browser tetapi tidak didokumentasikan di TypeScript
-        Notification.onpermissionchange = handlePermissionChange;
+        // Menggunakan type assertion untuk mengatasi type error
+        const NotificationWithChange = Notification as unknown as NotificationConstructorWithPermissionChange;
+        NotificationWithChange.onpermissionchange = handlePermissionChange;
         
         return () => {
-          // @ts-ignore
-          Notification.onpermissionchange = null;
+          NotificationWithChange.onpermissionchange = null;
         };
       }
     } else {
