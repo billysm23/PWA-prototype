@@ -3,6 +3,10 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Type definitions
+type ErrorDetails = string | Record<string, unknown>;
+type ResponseData = Record<string, unknown>;
+
 // Common constants
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -22,10 +26,10 @@ async function getSupabaseClient() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: Record<string, any>) {
+        set(name: string, value: string, options: Record<string, unknown>) {
           cookieStore.set({ name, value, ...options });
         },
-        remove(name: string, options: Record<string, any>) {
+        remove(name: string, options: Record<string, unknown>) {
           cookieStore.set({ name, value: '', ...options });
         },
       },
@@ -34,7 +38,7 @@ async function getSupabaseClient() {
 }
 
 // Helper for error responses
-function createErrorResponse(message: string, details: any, status = 500) {
+function createErrorResponse(message: string, details: ErrorDetails, status = 500) {
   return NextResponse.json(
     { error: message, details },
     { status, headers: CORS_HEADERS }
@@ -42,7 +46,7 @@ function createErrorResponse(message: string, details: any, status = 500) {
 }
 
 // Helper for success responses
-function createSuccessResponse(data: any, message?: string, status = 200) {
+function createSuccessResponse(data: ResponseData, message?: string, status = 200) {
   return NextResponse.json(
     { success: true, data, ...(message && { message }) },
     { status, headers: CORS_HEADERS }
@@ -91,7 +95,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('Error fetching collections:', error);
-      return createErrorResponse('Gagal mengambil data pengumpulan', error, 500);
+      return createErrorResponse('Gagal mengambil data pengumpulan', { message: error.message, details: error.details }, 500);
     }
 
     // Format data for response
@@ -106,8 +110,8 @@ export async function GET(req: NextRequest) {
       userId: collection.user_id
     }));
 
-    return createSuccessResponse(formattedCollections);
-  } catch (error: unknown) {
+    return createSuccessResponse({ collections: formattedCollections });
+  } catch (error) {
     console.error('Error in get collections:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return createErrorResponse('Terjadi kesalahan server', errorMessage, 500);
@@ -122,14 +126,14 @@ export async function POST(req: NextRequest) {
     
     // Validate input
     if (!bin_id) {
-      return createErrorResponse('Parameter bin_id tidak boleh kosong', null, 400);
+      return createErrorResponse('Parameter bin_id tidak boleh kosong', '', 400);
     }
     
     // Validate API key if provided
     if (api_key) {
       const API_KEY = process.env.IOT_API_KEY || 'smart-dustbin-secret-key';
       if (api_key !== API_KEY) {
-        return createErrorResponse('API key tidak valid', null, 401);
+        return createErrorResponse('API key tidak valid', '', 401);
       }
     }
     
@@ -147,7 +151,7 @@ export async function POST(req: NextRequest) {
       .single();
     
     if (findError) {
-      return createErrorResponse('Tempat sampah tidak ditemukan', findError, 404);
+      return createErrorResponse('Tempat sampah tidak ditemukan', { message: findError.message, details: findError.details }, 404);
     }
     
     const fillLevelBefore = existingBin.current_capacity;
@@ -174,7 +178,7 @@ export async function POST(req: NextRequest) {
     
     if (insertError) {
       console.error('Error creating collection record:', insertError);
-      return createErrorResponse('Gagal mencatat pengumpulan sampah', insertError, 500);
+      return createErrorResponse('Gagal mencatat pengumpulan sampah', { message: insertError.message, details: insertError.details }, 500);
     }
     
     // Update bin capacity to 0
@@ -223,7 +227,7 @@ export async function POST(req: NextRequest) {
       201
     );
     
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Error in create collection:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return createErrorResponse('Terjadi kesalahan server', errorMessage, 500);

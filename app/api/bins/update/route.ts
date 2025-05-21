@@ -80,11 +80,11 @@ export async function POST(req: NextRequest) {
     );
     
     // Tampilkan semua bin yang ada di database (untuk debugging)
-    const { data: allBins, error: listError } = await supabase.from('bins').select('id');
+    const { data: allBins } = await supabase.from('bins').select('id');
     // console.log("All bins in database:", allBins);
     
     // Cari bin dengan ID yang diberikan
-    const { data: existingBin, error: findError } = await supabase
+    const { error: findError } = await supabase
       .from('bins')
       .select('id')
       .eq('id', bin_id)
@@ -202,11 +202,11 @@ export async function POST(req: NextRequest) {
       headers: responseHeaders
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in bin update:', error);
     return NextResponse.json({ 
       error: 'Terjadi kesalahan server', 
-      details: error.message 
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { 
       status: 500,
       headers: {
