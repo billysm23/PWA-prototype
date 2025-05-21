@@ -45,7 +45,7 @@ const unsigned long GPS_UPDATE_INTERVAL = 10000;
 
 // Timing variables
 unsigned long lastUpdateTime = 0;
-const long updateInterval = 60000;
+const long updateInterval = 30000;
 
 // Connection status
 bool wifiConnected = false;
