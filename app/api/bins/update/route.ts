@@ -3,7 +3,8 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function OPTIONS() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function OPTIONS(req: NextRequest) {
   return new NextResponse(null, {
     status: 204,
     headers: {
@@ -66,27 +67,29 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll: () => {
-            return cookieStore.getAll().map((cookie) => ({
-              name: cookie.name,
-              value: cookie.value
-            }))
+          get(name: string) {
+            return cookieStore.get(name)?.value
           },
-          setAll: (cookies) => {
-            cookies.forEach(({ name, value, options }) => {
-              cookieStore.set({ name, value, ...options })
-            })
-          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          set(name: string, value: string, options: Record<string, any>) {
+            cookieStore.set({ name, value, ...options })
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          remove(name: string, options: Record<string, any>) {
+            cookieStore.set({ name, value: '', ...options })
+          },
         },
       }
     );
     
     // Tampilkan semua bin yang ada di database (untuk debugging)
-    const { data: allBins } = await supabase.from('bins').select('id');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { data: allBins, error: listError } = await supabase.from('bins').select('id');
     // console.log("All bins in database:", allBins);
     
     // Cari bin dengan ID yang diberikan
-    const { error: findError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { data: existingBin, error: findError } = await supabase
       .from('bins')
       .select('id')
       .eq('id', bin_id)
@@ -204,11 +207,12 @@ export async function POST(req: NextRequest) {
       headers: responseHeaders
     });
     
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
     console.error('Error in bin update:', error);
     return NextResponse.json({ 
       error: 'Terjadi kesalahan server', 
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error.message 
     }, { 
       status: 500,
       headers: {
